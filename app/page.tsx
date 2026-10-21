@@ -15,6 +15,7 @@ function Brand({ mobile = false }: { mobile?: boolean }) { return <div className
 function saveFile(content:string,name:string,type:string){const blob=new Blob([content],{type});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}
 export default function HomePage(){
   const [language,setLanguage]=useState<Language>("kk");
+  const [preferencesReady,setPreferencesReady]=useState(false);
   const t=(key:MessageKey,values:Record<string,string|number>={})=>translate(language,key,values);
   const [view,setView]=useState<"workspace"|"history">("workspace");
   const [form,setForm]=useState<FormSchema>(initialForm),[url,setUrl]=useState(FORM_URL);
@@ -33,8 +34,9 @@ export default function HomePage(){
   function applyDraft(draft:Draft){setForm(draft.form);setUrl(draft.form.url);setRules(draft.rules);setCount(draft.count);setRandom(draft.random);setIntervalMs(draft.interval);setRows([]);setError(null);setOpenQuestion(draft.form.questions.find(q=>q.type<=1)?.id??null);}
   useEffect(()=>{
     try{const savedLanguage=localStorage.getItem("formaflow-language");if(isLanguage(savedLanguage))setLanguage(savedLanguage);const draft=localStorage.getItem(DRAFT_KEY);if(draft){applyDraft(parseDraft(draft));setNotice("restored");}const saved=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");if(Array.isArray(saved))setHistory(saved.filter(item=>item&&typeof item.id==="string"&&typeof item.title==="string"&&Number.isFinite(Date.parse(item.at))&&Number.isInteger(item.sent)&&Number.isInteger(item.total)&&["completed","paused"].includes(item.state)).slice(0,30));}catch{}
+    setPreferencesReady(true);
   },[]);
-  useEffect(()=>{document.documentElement.lang=language;document.title=`FormaFlow — ${translate(language,"eyebrow")}`;try{localStorage.setItem("formaflow-language",language);}catch{}},[language]);
+  useEffect(()=>{if(!preferencesReady)return;document.documentElement.lang=language;document.title=`FormaFlow — ${translate(language,"eyebrow")}`;try{localStorage.setItem("formaflow-language",language);}catch{}},[language,preferencesReady]);
   useEffect(()=>{
     if(!modal)return;const previous=document.activeElement as HTMLElement,oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";dialogRef.current?.focus();
     function key(event:KeyboardEvent){if(event.key==="Escape"&&!busyRef.current)setModal(null);if(event.key!=="Tab")return;const controls=dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled])');if(!controls?.length)return;const first=controls[0],last=controls[controls.length-1];if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialogRef.current)){event.preventDefault();last.focus();}else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===dialogRef.current)){event.preventDefault();first.focus();}}
